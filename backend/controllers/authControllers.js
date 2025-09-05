@@ -39,7 +39,12 @@ export const signup = async (req, res) => {
 
     res
       .status(201)
-      .json({ status: true, message: "User Registered Successfully", user });
+      .json({ status: true, message: "User Registered Successfully", user:{
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      } });
 
   } catch (error) {
     console.log("Error in Signup : " + error.message);
@@ -60,7 +65,16 @@ export const login = async (req, res) => {
     if (user) {
       const isMatch = await bcrypt.compare(password, user.password);
       if (isMatch) {
-        generateToken(user._id, res);
+        
+       // Generate Tokens
+   const { accessToken, refreshToken } = generateTokens(user._id, res);
+
+   // Store refresh token in Redis
+    await storeRefreshToken(res, user._id, refreshToken);
+
+    // Set cookies
+    setCookies(res, accessToken, refreshToken);
+
         return res.status(200).json({ status: true, message: "Login Success" });
       } else {
         return res
@@ -80,11 +94,26 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-    });
+const refreshToken = req.cookies.refreshToken;
+const accessToken = req.cookies.accessToken;
+
+if(!refreshToken || !accessToken){
+  return res.status(400).json({success:false,message:"Tokens not found"});
+}
+
+    res.clearCookie("accessToken",accessToken, {
+    httpOnly: true, // prevent XSS attacks, cross site scripting attack
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict", // prevent CSRF attack, cross site request forgery attack
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+
+  res.clearCookie("refreshToken",refreshToken, {
+    httpOnly: true, // prevent XSS attacks, cross site scripting attack
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict", // prevent CSRF attack, cross site request forgery attack
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
 
     return res.status(200).json({
       success: true,
