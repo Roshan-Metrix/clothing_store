@@ -1,4 +1,6 @@
 import userModel from "../models/userModel.js";
+import jwt from "jsonwebtoken";
+import { redis } from "../lib/redis.js";
 import bcrypt from "bcryptjs";
 import { generateTokens, setCookies, storeRefreshToken } from "../lib/utils.js";
 
@@ -64,8 +66,8 @@ export const login = async (req, res) => {
 
     if (user) {
       const isMatch = await bcrypt.compare(password, user.password);
+
       if (isMatch) {
-        
        // Generate Tokens
    const { accessToken, refreshToken } = generateTokens(user._id, res);
 
@@ -75,7 +77,12 @@ export const login = async (req, res) => {
     // Set cookies
     setCookies(res, accessToken, refreshToken);
 
-        return res.status(200).json({ status: true, message: "Login Success" });
+        return res.status(200).json({ status: true, message: "Login Success", user:{
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }});
       } else {
         return res
           .status(400)
@@ -95,25 +102,18 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   try {
 const refreshToken = req.cookies.refreshToken;
-const accessToken = req.cookies.accessToken;
 
-if(!refreshToken || !accessToken){
-  return res.status(400).json({success:false,message:"Tokens not found"});
-}
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, message: "Tokens not found" });
+    }
 
-    res.clearCookie("accessToken",accessToken, {
-    httpOnly: true, // prevent XSS attacks, cross site scripting attack
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict", // prevent CSRF attack, cross site request forgery attack
-    maxAge: 15 * 60 * 1000, // 15 minutes
-  });
+    if (refreshToken) {
+      const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+      await redis.del(`refresh_token:${decoded.userId}`);
+    }
 
-  res.clearCookie("refreshToken",refreshToken, {
-    httpOnly: true, // prevent XSS attacks, cross site scripting attack
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict", // prevent CSRF attack, cross site request forgery attack
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
 
     return res.status(200).json({
       success: true,
@@ -125,4 +125,6 @@ if(!refreshToken || !accessToken){
   }
 };
 
-export const isAuth = async (req, res) => {};
+export const isAuth = async (req, res) => {
+  const { refreshToken } = req.cookies;
+};
