@@ -1,11 +1,11 @@
 import userModel from "../models/userModel.js";
 import bcrypt from "bcryptjs";
-import { generateToken } from "../lib/utils.js";
+import { generateTokens, setCookies, storeRefreshToken } from "../lib/utils.js";
 
-
+ 
 export const signup = async (req, res) => {
+  const { name, email, password } = req.body;
   try {
-    const { name, email, password } = req.body;
     if (!name || !email || !password)
       return res
         .status(400)
@@ -18,77 +18,82 @@ export const signup = async (req, res) => {
         .status(400)
         .json({ status: false, message: "User Already Registered" });
 
-    const hashedPassword = await bcrypt.hash(password,10)
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new userModel({
       name,
       email,
-      password:hashedPassword
+      password: hashedPassword,
     });
 
     await user.save();
-    
-    //Generating Token
-    if(user){
-      generateToken(user._Id,res)
-    }
-    
 
-    res.status(201).json({ status: true, message: "User Registered Successfully", user });
+    // Generate Tokens
+   const { accessToken, refreshToken } = generateTokens(user._id, res);
+
+   // Store refresh token in Redis
+    await storeRefreshToken(res, user._id, refreshToken);
+
+    // Set cookies
+    setCookies(res, accessToken, refreshToken);
+
+    res
+      .status(201)
+      .json({ status: true, message: "User Registered Successfully", user });
+
   } catch (error) {
-    console.log('Error in Signup : '+ error.message)
+    console.log("Error in Signup : " + error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 export const login = async (req, res) => {
-  const { email, password} = req.body;
+  const { email, password } = req.body;
 
-  if(!email || !password){
-    return res.status(400).json({status:false,message:'Missing Details'})
+  if (!email || !password) {
+    return res.status(400).json({ status: false, message: "Missing Details" });
   }
-   
-  try{
-     
-    const user = await userModel.findOne({email});
 
-    if(user){
-      const isMatch = await bcrypt.compare(password,user.password)
-      if(isMatch){
-        generateToken(user._id,res)
-        return res.status(200).json({status:true,message:'Login Success'})
-      }else{
-        return res.status(400).json({status:false,message:'Invalid Credentials'})
+  try {
+    const user = await userModel.findOne({ email });
+
+    if (user) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (isMatch) {
+        generateToken(user._id, res);
+        return res.status(200).json({ status: true, message: "Login Success" });
+      } else {
+        return res
+          .status(400)
+          .json({ status: false, message: "Invalid Credentials" });
       }
-    }else{
-      return res.status(400).json({status:false,message:'Please register first'})
+    } else {
+      return res
+        .status(400)
+        .json({ status: false, message: "Please register first" });
     }
-
-  }catch(error){
-    console.log("Error in Login Auth:"+error.message);
-    return res.status(500).send({success:false,message:error.message})
+  } catch (error) {
+    console.log("Error in Login Auth:" + error.message);
+    return res.status(500).send({ success: false, message: error.message });
   }
 };
 
 export const logout = async (req, res) => {
-  try{
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    });
 
-     res.clearCookie("token",{
-      httpOnly:true,
-      secure:process.env.NODE_ENV === "production",
-      sameSite:process.env.NODE_ENV === "production" ? "none" : "strict"
-     })
-
-     return res.status(200).json({
-      success:true, message: "Logged Out" });
-
-  } catch(error){
-    console.log("Error in logout:"+error.message)
-    return res.status(500).json({success:false,message:error.message})
+    return res.status(200).json({
+      success: true,
+      message: "Logged Out",
+    });
+  } catch (error) {
+    console.log("Error in logout:" + error.message);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const isAuth = async (req,res) => {
-  
-}
-
+export const isAuth = async (req, res) => {};
