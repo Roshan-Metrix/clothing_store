@@ -1,18 +1,26 @@
 import { createClient } from "redis"
 import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config({quiet: true});
 
 export const redis = createClient({
   url: process.env.UPSTASH_REDIS_URL
 });
 
 async function connectRedis() {
-  await redis.connect();
+  try {
+    await redis.connect();
+    console.log("Redis Connected");
+    return true;
+  } catch (error) {
+    console.error("Redis Connection Error:", error);
+    return false;
+  }
 }
 
-connectRedis();
+const isConnected = await connectRedis();
 
-if(!connectRedis){
+if (!isConnected) {
   console.log("Redis Not Connected");
 }
+
