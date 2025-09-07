@@ -59,40 +59,135 @@ export const createProduct = async (req, res) => {
       category,
     });
 
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "Product created successfully",
-        product,
-      });
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      product,
+    });
   } catch (error) {
     console.log("Error in createProduct controller", error.message);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
-export const deleteProduct = async (req,res) => {
+export const deleteProduct = async (req, res) => {
   try {
     const product = await productModel.findById(req.params.id);
-    
-    if(!product) return res.status(404).json({success:false, message:"Product not found"})
 
-      if(product.image){
-        const publicId = product.image.split("/").pop().split(",")[0];
-        try {
-          await cloudinary.uploader.destroy(`products/${publicId}`)
-          console.log("Deleted image from cloudinary")
-        } catch (error) {
-          console.log("Error deleting image from cloudinary",error);
-        }
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
+
+    if (product.image) {
+      const publicId = product.image.split("/").pop().split(".")[0];
+      try {
+        await cloudinary.uploader.destroy(`products/${publicId}`);
+        console.log("Deleted image from cloudinary");
+      } catch (error) {
+        console.log("Error deleting image from cloudinary", error);
       }
-
-      await productModel.findByIdAndDelete(req.params.id);
-
-      res.json({success: true, message:'Product deleted successfully'})
-    } catch (error) {
-      console.log("Error in deleteProduct controller",error.message)
-      res.status(500).json({success:true,error:error.massage})
     }
+
+    await productModel.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: "Product deleted successfully" });
+  } catch (error) {
+    console.log("Error in deleteProduct controller", error.message);
+    res.status(500).json({ success: false, error: error.massage });
+  }
+};
+
+export const getRecommendedProducts = async (req, res) => {
+  try {
+    const products = await productModel.aggregate([
+      {
+        $sample: { size: 3 },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          image: 1,
+          price: 1,
+        },
+      },
+    ]);
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Three recommended products achieve successfully",
+        products,
+      });
+  } catch (error) {
+    console.log("Error in getRecommendedProducts controller", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.massage });
+  }
+};
+
+export const getProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    const products = await productModel.find({ category });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Achieve Successfully", products });
+  } catch (error) {
+    console.log("Error in getProductsByCategory controller:", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.massage });
+  }
+};
+
+export const toggleFeaturedProduct = async (req, res) => {
+  try {
+    const product = await productModel.findById(req.params.id);
+
+    if (product) {
+      productModel.isFeatured = !productModel.isFeatured;
+      const updatedProduct = await productModel.save();
+      // update redis
+      await updateFeaturedProductsCache();
+      res
+        .status(200)
+        .json({
+          success: true,
+          message: "Updated Successfully",
+          upadatedProduct,
+        });
+    } else {
+      res.status(400).json({ success: false, message: "Product Not Found" });
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "Achieve Successfully", products });
+  } catch (error) {
+    console.log("Error in toggleFeaturedProduct controller:", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.massage });
+  }
+};
+
+async function updateFeaturedProductsCache() {
+  try {
+    const featuredProducts = await productModel
+      .find({ isFeatured: true })
+      .lean();
+    await redis.set("featured_products", JSON.stringify(featuredProducts));
+  } catch (error) {
+    console.log("Error in update Cache function :", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.massage });
+  }
 }
