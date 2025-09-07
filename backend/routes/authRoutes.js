@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, logout, refreshToken, signup } from '../controllers/authControllers.js';
+import { getProfile, login, logout, refreshToken, signup } from '../controllers/authControllers.js';
 
 
 
@@ -9,5 +9,6 @@ authRouter.post('/signup', signup);
 authRouter.post('/login', login);
 authRouter.post('/logout', logout);
 authRouter.post('/refresh-token', refreshToken);
+authRouter.get('/profile',getProfile)
 
 export default authRouter;
