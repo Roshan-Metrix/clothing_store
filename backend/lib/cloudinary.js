@@ -9,6 +9,6 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-if(cloudinary) console.log("Cloudinary Connected")
+if(cloudinary.config) console.log("Cloudinary Connected")
 
 export default cloudinary;
