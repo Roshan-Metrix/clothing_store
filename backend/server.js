@@ -4,6 +4,7 @@ import connectDB from './config/mongodb.js';
 import cookieParser from 'cookie-parser';
 import authRouter from './routes/authRoutes.js';
 import productRouter from './routes/productRoutes.js';
+import cartRouter from './routes/cartRoutes.js';
 
 dotenv.config({quiet: true});
 const app = express();
@@ -20,6 +21,7 @@ app.get('/',(req,res) => {
 
 app.use('/api/auth',authRouter);
 app.use('/api/products',productRouter);
+app.use('/api/cart',cartRouter);
 
 app.listen(PORT,() => {
     console.log(`App is running at ${PORT}`)
