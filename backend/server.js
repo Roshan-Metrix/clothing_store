@@ -1,8 +1,9 @@
 import express from 'express'
 import dotenv from 'dotenv'
-import authRouter from './routes/authRoutes.js';
 import connectDB from './config/mongodb.js';
 import cookieParser from 'cookie-parser';
+import authRouter from './routes/authRoutes.js';
+import productRouter from './routes/productRoutes.js';
 
 dotenv.config({quiet: true});
 const app = express();
@@ -18,6 +19,7 @@ app.get('/',(req,res) => {
 })
 
 app.use('/api/auth',authRouter);
+app.use('/api/products',productRouter);
 
 app.listen(PORT,() => {
     console.log(`App is running at ${PORT}`)
