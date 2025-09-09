@@ -5,17 +5,17 @@ export const addToCart = async (req,res) => {
     const { productId } = req.body;
     const user = req.user;
 
-    const existingItem = userModel.cartItems.find(item => item.id === productId);
+    const existingItem = user.cartItems.find(item => item.id === productId);
 
     if(existingItem) {
       existingItem.quantity += 1;
     } else {
-      userModel.cartItems.push(productId);
+      user.cartItems.push(productId);
     }
 
-    await userModel.save();
+    await user.save();
 
-    res.json({ success: true, message: 'Added Successfully', cartItems: userModel.cartItems })
+    res.status(200).json({ success: true, message: 'Added Successfully', cartItems: user.cartItems })
 
   } catch (error) {
     console.log("Error in addToCart controller : ",error.message);
@@ -26,17 +26,17 @@ export const addToCart = async (req,res) => {
 export const removeAllFromCart = async (req,res) => {
   try {
     const { productId } = req.body;
-    const existingItem = userModel.cartItems.find(item => item.id === productId);
+    const user = req.user;
 
-    if(existingItem) {
-      existingItem.quantity += 1;
+    if(!productId) {
+      user.cartItems = [];
     } else {
-      userModel.cartItems.push(productId);
+      user.cartItems = user.cartItems.filter((item) => item.id !== productId)
     }
 
-    await userModel.save();
+    await user.save;
 
-    res.json({ success: true, message: 'Added Successfully', cartItems: userModel.cartItems })
+    res.status(200).json({ success: true, message: 'Remove Successfully', cartItems: user.cartItems })
   } catch (error) {
     console.log("Error in removeAllFromCart controller : ",error.message);
     res.status(500).json({ success: false, message: error.message });
@@ -45,7 +45,23 @@ export const removeAllFromCart = async (req,res) => {
 
 export const updateQuantity = async (req,res) => {
   try {
-    console.log('helllo')
+    const { id:productId } = req.params;
+    const { quantity } = req.body;
+    const user = req.user;
+    const existingItem = user.cartItems.find((item) => item.id === productId);
+
+    if(existingItem){
+      if(quantity === 0){
+        user.cartItems = user.cartItems.filter((item) => item.id !== productId);
+        await user.save();
+         res.status(200).json({ success: true, message: 'Update Successfully', cartItems: user.cartItems })
+      }
+      existingItem.quantity = quantity;
+      await user.save();
+      res.status(200).json({ success: true, message: 'Update Successfully', cartItems: user.cartItems })
+    }else{
+      res.status(400).json({success:false,message:'Product not found '})
+    }
   } catch (error) {
     console.log("Error in updateQuantity controller : ",error.message);
     res.status(500).json({ success: false, message: error.message });
