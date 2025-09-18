@@ -5,7 +5,6 @@ import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import AdminPage from "./pages/AdminPage";
 import CategoryPage from "./pages/CategoryPage";
-
 import Navbar from "./components/Navbar";
 import { Toaster } from "react-hot-toast";
 import { useUserStore } from "./stores/useUserStore";
