@@ -2,9 +2,9 @@ import express from "express";
 import { adminRoute, protectRoute } from "../middleware/auth.middleware.js";
 import { getAnalyticsData, getDailySalesData } from "../controllers/analytics.controller.js";
 
-const router = express.Router();
+const analyticsRoutes = express.Router();
 
-router.get("/", protectRoute, adminRoute, async (req, res) => {
+analyticsRoutes.get("/", protectRoute, adminRoute, async (req, res) => {
 	try {
 		const analyticsData = await getAnalyticsData();
 
@@ -23,4 +23,4 @@ router.get("/", protectRoute, adminRoute, async (req, res) => {
 	}
 });
 
-export default router;
+export default analyticsRoutes;
