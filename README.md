@@ -38,7 +38,7 @@ Welcome to the Clothing Store E-commerce project! This is a full-stack MERN (Mon
 
 ## Roadmap
 
-- [x] Project setup
+- [ ] Project setup
 - [ ] Implement product listing
 - [ ] Add user authentication
 - [ ] Integrate shopping cart
